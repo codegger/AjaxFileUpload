@@ -1,3 +1,6 @@
+/*! Ajax File Upload Plugin - v1.0.0 - 2013-05-01
+* https://github.com/jchild3rs/AjaxFileUpload -> modified to use file name when upload file
+* Copyright (c) 2013 James Childers; Licensed MIT */
 (function() {
   var AjaxFileUpload,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
@@ -16,6 +19,9 @@
       showCustomInput: false,
       buttonEmptyText: "Select",
       buttonSelectedText: "Upload",
+      showProgressBar: false,
+      progressBarElement: "",
+      debug: false,
       multiple: false,
       sizeLimit: 0,
       allowedTypes: [],
@@ -29,12 +35,12 @@
 
     function AjaxFileUpload(input, options) {
       var _this = this;
+
       this.input = input;
       this.upload = __bind(this.upload, this);
-
-      this.reset = __bind(this.reset, this);
-
+      this.reset = __bind(this.reset, this); 
       this.settings = utils.merge(defaultSettings, options);
+
       if (this.input.multiple || this.settings.multiple) {
         this.input.multiple = true;
         this.settings.multiple = true;
@@ -55,13 +61,15 @@
       }
       if (this.settings.additionalData !== {}) {
         this.settings.url += "?" + (utils.serialize(this.settings.additionalData));
+        if(typeof(options.url) !== "undefined")
+          options.url += "?" + (utils.serialize(this.settings.additionalData));
       }
       if (this.settings.showCustomInput) {
         setupCustomInput(this);
       }
       if (has.fileAPI && has.formData) {
         this.input.addEventListener("change", function(event) {
-          return handleFileSelection(event, _this);
+          return handleFileSelection(event, _this, options);
         });
       } else {
         embedSWF(this);
@@ -92,9 +100,9 @@
       return ajaxUpload(this);
     };
 
-    handleFileSelection = function(event, instance) {
+    handleFileSelection = function(event, instance, options) {
       var fakeButton, fakeInput, settings;
-      settings = instance.settings;
+      settings = utils.merge(instance.settings, options);
       if (validateFiles(instance)) {
         if (settings.autoUpload) {
           instance.upload();
@@ -144,7 +152,7 @@
       _ref = instance.input.files;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         file = _ref[_i];
-        formData.append(file.name, file);
+        formData.append(instance.input.name, file);
       }
       xhr.open(instance.settings.method, instance.settings.url, true);
       switch (instance.settings.dataType) {
@@ -168,7 +176,7 @@
         return;
       }
       response = xhr.responseText;
-      if (~(xhr.getResponseHeader("content-type").indexOf("application/json")) && !!window.JSON) {
+      if (instance.settings.dataType == "json") {
         response = JSON.parse(response);
       }
       if (xhr.status === 200 || xhr.status === 201) {
@@ -213,6 +221,7 @@
         id: instance.input.id,
         url: instance.settings.url,
         method: instance.settings.method,
+        debug: instance.settings.debug,
         multiple: instance.settings.multiple,
         additionalData: instance.settings.additionalData,
         sizeLimit: instance.settings.sizeLimit,
